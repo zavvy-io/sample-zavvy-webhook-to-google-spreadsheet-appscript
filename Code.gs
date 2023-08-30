@@ -3,7 +3,7 @@ const SPREADSHEET = SpreadsheetApp.getActive();
 // TODO: Change the name of the sheet if it is different.
 const SPREADSHEET_SHEET = SPREADSHEET.getSheetByName("Sheet1"); 
 // TODO: Change this to match your Journey ID.
-const ZAVVY_JOURNEY_ID = 35788; 
+const ZAVVY_JOURNEY_ID = 12345667; 
 const LAST_UPDATED_AT_COLUMN_NAME = "Last updated at";
 const ASSIGNMENT_ID_COLUMN_NAME = "Assignment ID";
 
