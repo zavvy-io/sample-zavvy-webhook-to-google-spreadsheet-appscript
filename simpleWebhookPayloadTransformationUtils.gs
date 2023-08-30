@@ -1,3 +1,13 @@
+/** 
+ * This file contains util funcitons to perform some transformations on Zavvy's 
+ * Webhook payload. 
+ */
+
+/**
+ * Extract answer values as a string from an answer object
+ * 
+ * @param answer Answer object from Zavvy webhook payload.
+ */ 
 function getStringifiedAnswersValueFromAnswerObject(answer) {
   let values = [];
   if (answer.text.body_as_plain_text != null) {
@@ -11,6 +21,12 @@ function getStringifiedAnswersValueFromAnswerObject(answer) {
   return values.join(", ");
 }
 
+/**
+ * Flatten the FormSubmission webhook payload from Zavvy into an object 
+ * map that easily represent a row in a Speadsheet.
+ * 
+ * @param webhookPayload Zavvy webhook payload object
+ */ 
 function transformPayloadToFlattenedObject(webhookPayload) {
   let originalPayload = webhookPayload;
 
