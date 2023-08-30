@@ -3,7 +3,7 @@ const SPREADSHEET = SpreadsheetApp.getActive();
 // TODO: Change the name of the sheet if it is different.
 const SPREADSHEET_SHEET = SPREADSHEET.getSheetByName("Sheet1"); 
 // TODO: Change this to match your Journey ID.
-const ZAVVY_JOURNEY_ID = 12345667; 
+const ZAVVY_JOURNEY_ID = 1234567; 
 const LAST_UPDATED_AT_COLUMN_NAME = "Last updated at";
 const ASSIGNMENT_ID_COLUMN_NAME = "Assignment ID";
 
@@ -147,7 +147,7 @@ function doPost(e) {
   //       "id": 42,
   //       "submitted_at": "2023-08-16T13:22:23.536Z"
   //     },
-  //     "journey_id": 42,
+  //     "journey_id": 1234567,
   //     "journey_step_id": 42,
   //     "journey_step_title": "Your laptop form",
   //     "journey_title": "Preboarding"
@@ -156,9 +156,9 @@ function doPost(e) {
   // }
 
   if (webhookPayload.data.journey_id != ZAVVY_JOURNEY_ID) {
-    return ContentService.createTextOutput(
-      `Journey ID: ${webhookPayload.data.journey_id} is not allowed on this endpoint`
-    );
+    let message = `ERROR: Journey ID: ${webhookPayload.data.journey_id} is not allowed on this endpoint`
+    Logger.log(message);
+    return ContentService.createTextOutput(message);
   }
 
   let transformedData = transformPayloadToFlattenedObject(webhookPayload); // this is defined in +simpleWebhookPayloadTransformationUtils+ file
@@ -185,7 +185,7 @@ function doPost(e) {
     );
   });
 
-  return ContentService.createTextOutput(
-    `Successfully upserted the data: ${JSON.stringify(transformedData)}`
-  );
+  let message = `Successfully upserted the data: ${JSON.stringify(transformedData)}`;
+  Logger.log(message);
+  return ContentService.createTextOutput(message);
 }
