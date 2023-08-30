@@ -36,6 +36,7 @@ function transformPayloadToFlattenedObject(webhookPayload) {
     // TODO: Zavvy returns date in format "YYYY-MM-DD". Please adjust the line below
     // to match the format of your date field.
     "Start date": originalPayload.data.assignee_company_user.hire_date,
+    "Assignee email": originalPayload.data.assignee_company_user.email,
     "Manager email": originalPayload.data.assignee_company_user.manager_company_users[0]?.email,
   };
   originalPayload.data.form_submission.answers.forEach((answer) => {
