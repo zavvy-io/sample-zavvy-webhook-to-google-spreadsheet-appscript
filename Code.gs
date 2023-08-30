@@ -158,7 +158,7 @@ function doPost(e) {
   if (webhookPayload.data.journey_id != ZAVVY_JOURNEY_ID) {
     let message = `ERROR: Journey ID: ${webhookPayload.data.journey_id} is not allowed on this endpoint`
     Logger.log(message);
-    return ContentService.createTextOutput(message);
+    return;
   }
 
   let transformedData = transformPayloadToFlattenedObject(webhookPayload); // this is defined in +simpleWebhookPayloadTransformationUtils+ file
@@ -187,5 +187,5 @@ function doPost(e) {
 
   let message = `Successfully upserted the data: ${JSON.stringify(transformedData)}`;
   Logger.log(message);
-  return ContentService.createTextOutput(message);
+  return;
 }
