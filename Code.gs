@@ -1,18 +1,24 @@
 const SPREADSHEET = SpreadsheetApp.getActive();
 
-// TODO: Change the name of the sheet if it is different.
-const SPREADSHEET_SHEET = SPREADSHEET.getSheetByName("Sheet1"); 
-// TODO: Change this to match your Journey ID.
-const ZAVVY_JOURNEY_ID = 1234567; 
+/*
+ * TODO: Change Journey IDs and Sheet names.
+ * Journey ID as the key.
+ * Sheet name in the value.
+ */
+const SPREADSHEET_SHEETS_BY_JOURNEY_ID = {
+  1234567890: SPREADSHEET.getSheetByName("Sheet1"),
+  7890123456: SPREADSHEET.getSheetByName("Sheet2"),
+}
+
 const LAST_UPDATED_AT_COLUMN_NAME = "Last updated at";
 const ASSIGNMENT_ID_COLUMN_NAME = "Assignment ID";
 
-function getSheetHeaderColumnIndexWithContent(content) {
-  var idx = SPREADSHEET_SHEET.getDataRange().getValues()[0].indexOf(content);
+function getSheetHeaderColumnIndexWithContent(sheet, content) {
+  var idx = sheet.getDataRange().getValues()[0].indexOf(content);
   if (idx == -1) { return null; }
 
   /*
-   * +idx+ is an index from Array of values. They start from 0. 
+   * +idx+ is an index from Array of values. They start from 0.
    * However, when working with Column and Row indexes, we are
    * used to indexes starting from 1. So, we add 1 to this for
    * consistency
@@ -20,50 +26,48 @@ function getSheetHeaderColumnIndexWithContent(content) {
   return idx + 1;
 }
 
-function setValueInSheetCell(rowIndex, columnIndex, content) {
-  SPREADSHEET_SHEET.getRange(rowIndex, columnIndex).setValue(content);
-  SPREADSHEET_SHEET.getRange(
-    rowIndex, 
-    getSheetHeaderColumnIndexWithContent(LAST_UPDATED_AT_COLUMN_NAME)
+function setValueInSheetCell(sheet, rowIndex, columnIndex, content) {
+  sheet.getRange(rowIndex, columnIndex).setValue(content);
+  sheet.getRange(
+    rowIndex,
+    getSheetHeaderColumnIndexWithContent(sheet, LAST_UPDATED_AT_COLUMN_NAME)
   ).setValue(new Date().toUTCString());
 }
 
-function appendNewHeaderColumnToSheet(content) {
-  var lastColumnIndex = SPREADSHEET_SHEET.getLastColumn();
-  SPREADSHEET_SHEET.getRange(1, (lastColumnIndex + 1)).setValue(content);
+function appendNewHeaderColumnToSheet(sheet, content) {
+  var lastColumnIndex = sheet.getLastColumn();
+  sheet.getRange(1, (lastColumnIndex + 1)).setValue(content);
 }
 
-function checkAndCreateColumns(columnNames) {
-  columnNames.forEach(function(columnName){ 
-    if (getSheetHeaderColumnIndexWithContent(columnName) == null) {    
-      Logger.log("Missing column: '%s'. Will create it now.", columnName);      
-      appendNewHeaderColumnToSheet(columnName);
+function checkAndCreateColumns(sheet, columnNames) {
+  columnNames.forEach(function(columnName){
+    if (getSheetHeaderColumnIndexWithContent(sheet, columnName) == null) {
+      console.log("Missing column: '%s'. Will create it now.", columnName);
+      appendNewHeaderColumnToSheet(sheet, columnName);
     }
   });
 }
 
-function getRowIndexForColumnAndValuePair(columnName, value, shouldCreateIfMissing=false) {
-  const assingmentIdMatchRange = SPREADSHEET_SHEET
+function getRowIndexForColumnAndValuePair(sheet, columnName, value, shouldCreateIfMissing=false) {
+  const assingmentIdMatchRange = sheet
     .createTextFinder(value)
     .matchEntireCell(true)
     .findNext();
 
   if (assingmentIdMatchRange) {
-    return assingmentIdMatchRange.getRowIndex();    
+    return assingmentIdMatchRange.getRowIndex();
   } else if (shouldCreateIfMissing) {
-    Logger.log("Row for '%s':'%s' is missing. Will create one.", columnName, value);
-    SPREADSHEET_SHEET.getRange(
-      SPREADSHEET_SHEET.getLastRow() + 1, 
-      getSheetHeaderColumnIndexWithContent(columnName)
+    console.log("Row for '%s':'%s' is missing. Will create one.", columnName, value);
+    sheet.getRange(
+      sheet.getLastRow() + 1,
+      getSheetHeaderColumnIndexWithContent(sheet, columnName)
     ).setValue(value);
 
-    return getRowIndexForColumnAndValuePair(columnName, value, false);
+    return getRowIndexForColumnAndValuePair(sheet, columnName, value, false);
   }
 }
 
 function doPost(e) {
-  Logger.log(e);
-
   var webhookPayload = JSON.parse(e.postData.contents);
 
   // TODO: Below is a sample payload if you need a sample.
@@ -125,7 +129,7 @@ function doPost(e) {
   //           "text": {
   //             "body_as_plain_text": null
   //           }
-  //         },         
+  //         },
   //       ],
   //       "company_user": {
   //         "email": "assginee-user@example.com",
@@ -155,37 +159,41 @@ function doPost(e) {
   //   "type": "journey.form_submission.submitted"
   // }
 
-  if (webhookPayload.data.journey_id != ZAVVY_JOURNEY_ID) {
-    let message = `ERROR: Journey ID: ${webhookPayload.data.journey_id} is not allowed on this endpoint`
-    Logger.log(message);
+  var sheet = SPREADSHEET_SHEETS_BY_JOURNEY_ID[webhookPayload.data.journey_id];
+  if (!sheet) {
+    let message = `ERROR: No sheet configured for Journey ID: ${webhookPayload.data.journey_id}`;
+    console.log(message);
     return;
   }
 
   let transformedData = transformPayloadToFlattenedObject(webhookPayload); // this is defined in +simpleWebhookPayloadTransformationUtils+ file
-  Logger.log(transformedData);
-  checkAndCreateColumns([LAST_UPDATED_AT_COLUMN_NAME, ASSIGNMENT_ID_COLUMN_NAME]);
-  checkAndCreateColumns(Object.keys(transformedData));
-
   let assignmentId = webhookPayload.data.form_submission.form_submission_scopes.find(
     (scope) => scope.scopeable_type == "Assignment"
   ).scopeable_id;
-  
+
+  console.log(`Processing webhook data for Assignment ID: ${assignmentId}, Journey ID: ${webhookPayload.data.journey_id}`);
+
+  checkAndCreateColumns(sheet, [LAST_UPDATED_AT_COLUMN_NAME, ASSIGNMENT_ID_COLUMN_NAME]);
+  checkAndCreateColumns(sheet, Object.keys(transformedData));
+
   var assignmentRowIndex = getRowIndexForColumnAndValuePair(
-    ASSIGNMENT_ID_COLUMN_NAME, 
+    sheet,
+    ASSIGNMENT_ID_COLUMN_NAME,
     assignmentId,
     true
   );
 
-  Object.entries(transformedData).forEach(([columnName, value]) => { 
-    var columnIndex = getSheetHeaderColumnIndexWithContent(columnName);
+  Object.entries(transformedData).forEach(([columnName, value]) => {
+    var columnIndex = getSheetHeaderColumnIndexWithContent(sheet, columnName);
     setValueInSheetCell(
-      assignmentRowIndex, 
-      columnIndex, 
+      sheet,
+      assignmentRowIndex,
+      columnIndex,
       value
     );
   });
 
   let message = `Successfully upserted the data: ${JSON.stringify(transformedData)}`;
-  Logger.log(message);
+  console.log(message);
   return;
 }
